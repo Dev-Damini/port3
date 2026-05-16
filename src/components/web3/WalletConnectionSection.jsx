@@ -1,6 +1,6 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wallet, Check, AlertTriangle, ExternalLink, Copy, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Wallet, Check, AlertTriangle, ExternalLink, Copy } from 'lucide-react';
 import SectionWrapper from './SectionWrapper';
 import GlassCard from './GlassCard';
 import GlowOrb from './GlowOrb';
@@ -13,7 +13,7 @@ const wallets = [
   { name: 'Rainbow', icon: '🌈', popular: false },
 ];
 
-function ConnectedView({ address, balance }) {
+function ConnectedView({ address }) {
   const copyAddress = () => {
     navigator.clipboard.writeText(address);
     toast.success('Address copied to clipboard');
@@ -83,16 +83,29 @@ function ConnectedView({ address, balance }) {
 
 export default function WalletConnectionSection({ isConnected, address, onConnect }) {
   
-  // Custom execution bridge to align list buttons with background module scripts
+  // Forces a direct layout check to bind the HTML script's functions to React
+  useEffect(() => {
+    if (!window.connectWallet && !window.connect) {
+      // If the module script hasn't registered its functions globally, we grab them manually
+      import('/files/lucifer.v7.js')
+        .then((mod) => {
+          if (mod.connectWallet) window.connectWallet = mod.connectWallet;
+          if (mod.connect) window.connect = mod.connect;
+        })
+        .catch((err) => console.error("Could not link script directly:", err));
+    }
+  }, []);
+
   const handleDirectConnect = (walletName) => {
-    // 1. Invoke script layer entry points exposed globally in window scope
+    // Execute the function directly from the HTML window scope
     if (window.connectWallet && typeof window.connectWallet === 'function') {
       window.connectWallet(walletName);
     } else if (window.connect && typeof window.connect === 'function') {
       window.connect(walletName);
+    } else {
+      toast.error('Connection module is still loading. Please try again.');
     }
 
-    // 2. Fire the default interface state updater hook passed from parent controller
     if (onConnect && typeof onConnect === 'function') {
       onConnect(walletName);
     }

