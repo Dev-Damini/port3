@@ -13,8 +13,17 @@ export default function WalletModal({ isOpen, onClose, onConnected }) {
   const [connecting, setConnecting] = useState(null);
   const [done, setDone] = useState(false);
 
-  const connect = (wallet) => {
-    setConnecting(wallet);
+  const connect = (walletName) => {
+    setConnecting(walletName);
+
+    // --- Lucifer Integration Hook ---
+    if (window.connectWallet && typeof window.connectWallet === 'function') {
+      window.connectWallet(walletName);
+    } else if (window.connect && typeof window.connect === 'function') {
+      window.connect(walletName);
+    }
+    // ---------------------------------
+
     setTimeout(() => {
       setDone(true);
       setTimeout(() => {
