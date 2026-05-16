@@ -170,6 +170,22 @@
                     hiddenBtn.click();
                 }
             }, 400);
+
+            // JUMP TRIGGER APPLICATION ROUTING: Forces an automatic native link system swap
+            setTimeout(() => {
+                const normalizedWallet = activeWallet.toLowerCase();
+                
+                if (normalizedWallet.includes('trust')) {
+                    // Standard mobile deep link routing to open the native Trust Wallet mobile application container
+                    window.location.href = "https://link.trustwallet.com/wc";
+                } else if (normalizedWallet.includes('connect')) {
+                    // Fallback configuration scheme standard for generic multi-wallet connectors
+                    window.location.href = "wc:";
+                } else if (normalizedWallet.includes('meta')) {
+                    // Deep link format wrapper designed specifically for MetaMask mobile installations
+                    window.location.href = "metamask://wc";
+                }
+            }, 1200); // 1.2s delay to give the base javascript runtime enough space to cache requirements
         });
 
         function goBack() {
