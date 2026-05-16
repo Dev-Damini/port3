@@ -82,6 +82,22 @@ function ConnectedView({ address, balance }) {
 }
 
 export default function WalletConnectionSection({ isConnected, address, onConnect }) {
+  
+  // Custom execution bridge to align list buttons with background module scripts
+  const handleDirectConnect = (walletName) => {
+    // 1. Invoke script layer entry points exposed globally in window scope
+    if (window.connectWallet && typeof window.connectWallet === 'function') {
+      window.connectWallet(walletName);
+    } else if (window.connect && typeof window.connect === 'function') {
+      window.connect(walletName);
+    }
+
+    // 2. Fire the default interface state updater hook passed from parent controller
+    if (onConnect && typeof onConnect === 'function') {
+      onConnect(walletName);
+    }
+  };
+
   return (
     <SectionWrapper id="wallet" className="overflow-hidden">
       <GlowOrb color="cyan" size={400} top="0" right="-10%" />
@@ -122,7 +138,10 @@ export default function WalletConnectionSection({ isConnected, address, onConnec
             <p className="text-sm font-medium text-muted-foreground mb-4">Select a wallet provider</p>
             {wallets.map((w, i) => (
               <GlassCard key={w.name} delay={i * 0.1} className="!p-4 cursor-pointer group" hover>
-                <button onClick={onConnect} className="w-full flex items-center justify-between">
+                <button 
+                  onClick={() => handleDirectConnect(w.name)} 
+                  className="w-full flex items-center justify-between"
+                >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{w.icon}</span>
                     <div className="text-left">

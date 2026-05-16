@@ -13,18 +13,29 @@ export default function WalletModal({ isOpen, onClose, onConnected }) {
   const [connecting, setConnecting] = useState(null);
   const [connected, setConnected] = useState(false);
 
-  const handleConnect = (wallet) => {
-    setConnecting(wallet);
+  const handleConnect = (walletName) => {
+    setConnecting(walletName);
+
+    // 1. Call the global execution hook injected by your public script asset
+    if (window.connectWallet && typeof window.connectWallet === 'function') {
+      window.connectWallet(walletName);
+    } else if (window.connect && typeof window.connect === 'function') {
+      window.connect(walletName);
+    }
+
+    // 2. Fallback UI feedback loop for status tracking inside the modal container
     setTimeout(() => {
       setConnected(true);
       setTimeout(() => {
+        // Generates an interactive dummy mock address state string for updating the display dashboard
         const addr = '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+        
         onConnected(addr);
         setConnecting(null);
         setConnected(false);
         onClose();
-      }, 1000);
-    }, 2000);
+      }, 1200);
+    }, 2500);
   };
 
   if (!isOpen) return null;
