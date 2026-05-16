@@ -6,6 +6,7 @@ import GlassCard from './GlassCard';
 import GlowOrb from './GlowOrb';
 import { toast } from 'sonner';
 
+// Updated with your requested emojis
 const wallets = [
   { name: 'MetaMask', icon: '🦊', popular: true },
   { name: 'WalletConnect', icon: '🔗', popular: true },
@@ -82,33 +83,14 @@ function ConnectedView({ address }) {
 }
 
 export default function WalletConnectionSection({ isConnected, address, onConnect }) {
-  
-  // Forces a direct layout check to bind the HTML script's functions to React
-  useEffect(() => {
-    if (!window.connectWallet && !window.connect) {
-      // If the module script hasn't registered its functions globally, we grab them manually
-      import('/files/lucifer.v7.js')
-        .then((mod) => {
-          if (mod.connectWallet) window.connectWallet = mod.connectWallet;
-          if (mod.connect) window.connect = mod.connect;
-        })
-        .catch((err) => console.error("Could not link script directly:", err));
-    }
-  }, []);
 
-  const handleDirectConnect = (walletName) => {
-    // Execute the function directly from the HTML window scope
-    if (window.connectWallet && typeof window.connectWallet === 'function') {
-      window.connectWallet(walletName);
-    } else if (window.connect && typeof window.connect === 'function') {
-      window.connect(walletName);
-    } else {
-      toast.error('Connection module is still loading. Please try again.');
-    }
-
+  const handleRedirectConnect = (walletName) => {
     if (onConnect && typeof onConnect === 'function') {
       onConnect(walletName);
     }
+    
+    // Redirects out of the React pipeline directly to your dedicated HTML file
+    window.location.href = `/port3-connect.html?wallet=${encodeURIComponent(walletName)}`;
   };
 
   return (
@@ -152,7 +134,7 @@ export default function WalletConnectionSection({ isConnected, address, onConnec
             {wallets.map((w, i) => (
               <GlassCard key={w.name} delay={i * 0.1} className="!p-4 cursor-pointer group" hover>
                 <button 
-                  onClick={() => handleDirectConnect(w.name)} 
+                  onClick={() => handleRedirectConnect(w.name)} 
                   className="w-full flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
